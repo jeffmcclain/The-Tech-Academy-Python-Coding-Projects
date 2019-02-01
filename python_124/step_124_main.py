@@ -136,9 +136,10 @@ def create_db(self):
         cur = conn.cursor()
         cur.execute('CREATE TABLE if not exists tbl_fileList( \
             ID INTEGER PRIMARY KEY AUTOINCREMENT, \
-            col_file TEXT, \
+            col_file TEXT UNIQUE, \
             col_timestamp TEXT \
             );')
+        # use UNIQUE key in col_file in order to eliminate duplicate file entries
         # save changes & close database connection
         conn.commit()
     conn.close()
@@ -160,31 +161,39 @@ def list_dir(self):
             txtList = os.path.join(source,file)
             time = datetime.fromtimestamp(os.path.getmtime(txtList))
             print('{} {}'.format(txtList,time))
-    move_files(self)        
+    update_db(self)
     
-
-    '''# connect to db and insert '.txt' file and timestamp info    
+     
+def update_db(self):
     conn = sqlite3.connect('python_124.db')
-    with conn:
+    source = self.txt_source.get()
+    fList = os.listdir(source)
+    dbList = []
+    txtPath = []
+    with conn:  # connect to db and insert '.txt' file and timestamp info 
         cur = conn.cursor()
-        for entry in txtList:
-            cur.execute(INSERT INTO tbl_fileList (col_file,col_timestamp) VALUES(?,?),(file,time))
+        for file in fList: # iterate through source dir looking for '.txt' files
+            if file.endswith('.txt'):
+                dbList.append(file)
+                txtPath = os.path.join(source,file)
+                time = datetime.fromtimestamp(os.path.getmtime(txtPath))
+                for entry in dbList:
+                    cur.execute('''INSERT OR REPLACE INTO tbl_fileList (col_file,col_timestamp) VALUES(?,?)''',(entry,time)) # 'OR IGNORE' used to eliminate duplicate entries
         conn.commit()
-    conn.close()'''
+    conn.close()
+    move_files(self)
 
-# call function to move '.txt' files to chosen destination directory
 
-
-# move '.txt' files to a new directory using
+# move '.txt' files to destination directory using
 # the move() method from the Shutil module
-
 def move_files(self):
     source = self.txt_source.get()
     destination = self.txt_dest.get()
-    txtList = os.path.join(source)
-    for file in txtList:
+    fList = os.listdir(source)
+    for file in fList:
+        abPath = os.path.join(source, file)
         if file.endswith('.txt'):
-            shutil.move(source + file, destination)
+            shutil.move(abPath, destination)
     
 
 
